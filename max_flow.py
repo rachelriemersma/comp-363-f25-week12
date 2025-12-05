@@ -44,15 +44,15 @@ def find_path(graph: list[list[int]], source: int, target: int):
     return path
 
 def find_min_capacity(residual: list[list[int]], path: list[int]) -> int:
-    min_capacity = 0
+    min_capacity = float('inf')
     # check each pair of verticies in the path 
     for i in range(len(path)-1):
         u = path[i]
         v = path[i+1]
         capacity = residual[u][v]
         # if the edge has a smaller capacity, update the capacity 
-        if capacity < min_capacity
-        min_capacity = capacity
+        if capacity < min_capacity:
+            min_capacity = capacity
     return min_capacity    
 
 def update_residual(residual: list[list[int]], path: list[int], flow: int):
@@ -65,16 +65,52 @@ def update_residual(residual: list[list[int]], path: list[int], flow: int):
 
 def find_reachable(residual: list[list[int]], source: int) -> set[int]:
     n = len(residual)
-    reachable = set()
+    # start w source 
+    reachable = set([source])
+    # verticies to explore 
     stack = [source]
     while len(stack) > 0:
+        # vertex to explore 
         u = stack.pop()
-        if u not in reachable:
-            reachable.add(u)
-            for v in range(n):
-                if residual[u][v] > 0 and v not in reachable:
-                    stack.append(v)
-    return reachable                
+        # check neighbors and if we can reach v from u 
+        for v in range(n):
+            if residual[u][v] > 0 and v not in reachable:
+                # its reachable and we need to explore it 
+                reachable.add(v)
+                stack.append(v)
+    return reachable
+
+def find_min_cut(graph: list[list[int]], residual: list[list[int]], source: int) -> list[tuple[int,int]]:
+    n = len(graph)
+    # find the reachable verticies from the source 
+    reachable = find_reachable(residual, source)
+    # the edges in the OG graph 
+    min_cut = []
+    for u in range(n):
+        for v in range(n):
+            # edge between u and v where u is reachable and v is not 
+            if graph[u][v] > 0 and u in reachable and v not in reachable:
+                min_cut.append((u, v))
+    return min_cut       
+
+def ford_fulk(graph: list[list[int]], source: int, target: int) -> tuple[int, list[tuple[int, int]]]:
+    # create copy of OG graph 
+    residual = copy.deepcopy(graph)
+    max_flow = 0
+    # find augmenting paths
+    path = find_path(residual, source, target)
+    while path is not None:
+        # find the min capacity for that path and add to max flow
+        min_capacity = find_min_capacity(residual, path)
+        max_flow += min_capacity
+        # update the residual graph using that minimum capacity 
+        update_residual(residual, path, min_capacity)
+        # look for another path 
+        path = find_path(residual, source, target)
+    # find the minimum cut     
+    min_cut = find_min_cut(graph, residual, source)
+    return max_flow, min_cut    
+
 
 # think abt later(redundant):
 #
@@ -82,3 +118,22 @@ def find_reachable(residual: list[list[int]], source: int) -> set[int]:
 #        u = path[i]
 #        v = path[i+1]
     
+
+G = [  
+    [0, 20, 0, 0, 0],  
+    [0, 0, 5, 6, 0],   
+    [0, 0, 0, 3, 7],  
+    [0, 0, 0, 0, 8],   
+    [0, 0, 0, 0, 0],  
+]
+
+max_flow, min_cut = ford_fulk(G, 0, 4)
+
+print(f"Max Flow: {max_flow}")
+
+print(f"Min Cut Edges: {min_cut}")
+
+# Verify min cut capacity equals max flow
+total_cut_capacity = sum(G[u][v] for u, v in min_cut)
+print(f"Total Min Cut Capacity: {total_cut_capacity}")
+
