@@ -44,11 +44,16 @@ def find_path(graph: list[list[int]], source: int, target: int):
     return path
 
 def find_min_capacity(residual: list[list[int]], path: list[int]) -> int:
+    """
+    finds the minimum capacity of a path aka bottleneck
+    Args:
+        residual: residual graph as adjacency matrix
+        path: list of verticies that make the path 
+    Returns: minimum capacity of the path 
+    """
     min_capacity = float('inf')
     # check each pair of verticies in the path 
-    for i in range(len(path)-1):
-        u = path[i]
-        v = path[i+1]
+    for u, v in get_path_edges(path):
         capacity = residual[u][v]
         # if the edge has a smaller capacity, update the capacity 
         if capacity < min_capacity:
@@ -56,14 +61,41 @@ def find_min_capacity(residual: list[list[int]], path: list[int]) -> int:
     return min_capacity    
 
 def update_residual(residual: list[list[int]], path: list[int], flow: int):
-    for i in range(len(path)-1):
-        u = path[i]
-        v = path[i+1]
+    """
+    move flow along the graph and update the residual.
+    Args: 
+        residual: residual graph as adjacency matrix
+        path: list of verticies that make the path
+        flow: amt being pushed through the graph      
+    """
+    for u, v in get_path_edges(path):
         # update forward and backwards capacities 
         residual[u][v] -= flow
         residual[v][u] += flow
 
+def get_path_edges(path: list[int]) -> list[tuple[int, int]]:
+    """
+    convert a path into a list of edges 
+    Args:
+        path: list of verticies that make the path
+    Returns: list of edges represented by tuples for that path     
+    """
+    edges = []
+    for i in range(len(path)-1):
+        u = path[i]
+        v = path[i+1]
+        # make current and "next" node a tuple
+        edges.append((u, v))
+    return edges           
+
 def find_reachable(residual: list[list[int]], source: int) -> set[int]:
+    """
+    find all the verticies that are reachable from the source in the residual 
+    Args: 
+        residual: residual graph as adjacency matrix
+        source: the starting vertex 
+    returns: set of vertex indices that can be reached from source     
+    """
     n = len(residual)
     # start w source 
     reachable = set([source])
@@ -81,6 +113,14 @@ def find_reachable(residual: list[list[int]], source: int) -> set[int]:
     return reachable
 
 def find_min_cut(graph: list[list[int]], residual: list[list[int]], source: int) -> list[tuple[int,int]]:
+    """
+    find the edges in the original graph to "cut"
+    args: 
+        residual: residual graph as adjacency matrix
+        graph: original graph as adjacency matrix 
+        source: the starting vertex 
+    returns: list of edge tuples (the minimum cut)    
+    """
     n = len(graph)
     # find the reachable verticies from the source 
     reachable = find_reachable(residual, source)
@@ -94,7 +134,16 @@ def find_min_cut(graph: list[list[int]], residual: list[list[int]], source: int)
     return min_cut       
 
 def ford_fulk(graph: list[list[int]], source: int, target: int) -> tuple[int, list[tuple[int, int]]]:
-    # create copy of OG graph 
+    """
+    full implementation of the ford-fulkerson algo, finds the max flow and min cut
+    finds augmenting paths, pushing flow through the graph until there are no longer paths
+    args:
+        graph: original graph as adjacency matrix 
+        source: the starting vertex 
+        target: target/sink vertex 
+    returns: the max flow value from source to target and the "cut" edges     
+    """
+    # create copy of OG graph so when altering residual the OG remains in tact 
     residual = copy.deepcopy(graph)
     max_flow = 0
     # find augmenting paths
@@ -111,18 +160,10 @@ def ford_fulk(graph: list[list[int]], source: int, target: int) -> tuple[int, li
     min_cut = find_min_cut(graph, residual, source)
     return max_flow, min_cut    
 
-
-# think abt later(redundant):
-#
-# for i in range(len(path)-1):
-#        u = path[i]
-#        v = path[i+1]
-    
-
 G = [  
     [0, 20, 0, 0, 0],  
     [0, 0, 5, 6, 0],   
-    [0, 0, 0, 3, 7],  
+    [0, 0, 0, 0, 7],  
     [0, 0, 0, 0, 8],   
     [0, 0, 0, 0, 0],  
 ]
@@ -133,7 +174,6 @@ print(f"Max Flow: {max_flow}")
 
 print(f"Min Cut Edges: {min_cut}")
 
-# Verify min cut capacity equals max flow
-total_cut_capacity = sum(G[u][v] for u, v in min_cut)
-print(f"Total Min Cut Capacity: {total_cut_capacity}")
+cut_capacity = sum(G[u][v] for u, v in min_cut)
+print(f"{max_flow} = {cut_capacity}")
 
